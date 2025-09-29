@@ -1,0 +1,10 @@
+/* Simple, high-contrast KPI cards */
+.kpi-card{
+  background:#ffffff;
+  border-radius:0.75rem;
+  padding:1rem;
+  box-shadow:0 1px 2px rgba(0,0,0,.05);
+  border:1px solid rgba(15,23,42,.08);
+}
+.kpi-label{font-size:.75rem;color:#64748b}
+.kpi-value{font-size:1.5rem;font-weight:700;color:#0f172a}

@@ -1,0 +1,16 @@
+{
+  "kpis": { "open": 17, "closed30d": 142, "avgHours": 6.3, "slaPct": 95 },
+  "trends": {
+    "labels": ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
+    "values": [12, 18, 9, 22, 15, 4, 7]
+  },
+  "categories": {
+    "labels": ["Network","Hardware","Software","Access","Other"],
+    "values": [21, 15, 34, 18, 12]
+  },
+  "tickets": [
+    { "id": "ZD-1021", "title": "Add user to SharePoint", "category": "Access", "status": "Open", "created": "2025-09-23" },
+    { "id": "ZD-1020", "title": "Printer not scanning to email", "category": "Hardware", "status": "Closed", "created": "2025-09-22" },
+    { "id": "ZD-1019", "title": "Dialpad caller ID change", "category": "Software", "status": "Closed", "created": "2025-09-22" }
+  ]
+}

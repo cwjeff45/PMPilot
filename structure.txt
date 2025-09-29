@@ -1,0 +1,9 @@
+it-dashboard/
+├─ index.html
+├─ /assets
+│  ├─ styles.css
+│  └─ logo.svg
+├─ /data
+│  └─ sample.json
+└─ /js
+   └─ app.js

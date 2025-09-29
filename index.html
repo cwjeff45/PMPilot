@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>IT Dashboard</title>
+  <!-- Tailwind (CDN for fast start; can switch to build later) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js for visuals -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900">
+  <header class="border-b bg-white">
+    <div class="mx-auto max-w-6xl px-4 py-4 flex items-center gap-4">
+      <img src="assets/logo.svg" alt="Logo" class="h-8 w-8" />
+      <h1 class="text-xl font-semibold">IT Dashboard</h1>
+      <nav class="ml-auto flex gap-4 text-sm">
+        <a class="hover:underline" href="#kpis">KPIs</a>
+        <a class="hover:underline" href="#charts">Charts</a>
+        <a class="hover:underline" href="#table">Data</a>
+        <a class="hover:underline" href="#about">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-6xl px-4 py-8 space-y-10">
+    <!-- KPIs -->
+    <section id="kpis" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="kpi-card">
+        <div class="kpi-label">Open Tickets</div>
+        <div class="kpi-value" id="kpi-open">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Closed (30d)</div>
+        <div class="kpi-value" id="kpi-closed">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Avg. Resolution (hrs)</div>
+        <div class="kpi-value" id="kpi-avg">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">SLA % (30d)</div>
+        <div class="kpi-value" id="kpi-sla">—</div>
+      </div>
+    </section>
+
+    <!-- Charts -->
+    <section id="charts" class="space-y-6">
+      <h2 class="text-lg font-semibold">Trends</h2>
+      <div class="rounded-xl bg-white p-4 shadow">
+        <canvas id="ticketsByDay"></canvas>
+      </div>
+      <div class="rounded-xl bg-white p-4 shadow">
+        <canvas id="categoryBreakdown"></canvas>
+      </div>
+    </section>
+
+    <!-- Table -->
+    <section id="table" class="space-y-4">
+      <h2 class="text-lg font-semibold">Recent Tickets</h2>
+      <div class="rounded-xl bg-white p-4 shadow overflow-auto">
+        <table class="min-w-full text-sm">
+          <thead class="border-b bg-slate-100">
+            <tr>
+              <th class="py-2 px-3 text-left">ID</th>
+              <th class="py-2 px-3 text-left">Title</th>
+              <th class="py-2 px-3 text-left">Category</th>
+              <th class="py-2 px-3 text-left">Status</th>
+              <th class="py-2 px-3 text-left">Created</th>
+            </tr>
+          </thead>
+          <tbody id="tickets-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="about" class="prose max-w-none">
+      <h2>About</h2>
+      <p>This is a lightweight, static dashboard hosted on GitHub Pages. Data is read from <code>/data/sample.json</code>. Swap in your own data or wire up an API later.</p>
+    </section>
+  </main>
+
+  <footer class="mt-10 border-t bg-white">
+    <div class="mx-auto max-w-6xl px-4 py-6 text-xs text-slate-500">
+      © <span id="year"></span> IT Dashboard
+    </div>
+  </footer>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
