@@ -1,10 +1,97 @@
-/* Simple, high-contrast KPI cards */
-.kpi-card{
-  background:#ffffff;
-  border-radius:0.75rem;
-  padding:1rem;
-  box-shadow:0 1px 2px rgba(0,0,0,.05);
-  border:1px solid rgba(15,23,42,.08);
+/* Buttons */
+.btn{
+  border-radius: 0.75rem;               /* rounded-xl */
+  border: 1px solid #0f172a;            /* approx slate-900 border */
+  background: #0f172a;                  /* slate-900 */
+  color: #ffffff;
+  padding: 0.5rem 0.75rem;              /* px-3 py-2 */
+  font-size: 0.875rem;                  /* text-sm */
+  line-height: 1.25rem;
+  cursor: pointer;
+  transition: opacity .15s ease;
 }
-.kpi-label{font-size:.75rem;color:#64748b}
-.kpi-value{font-size:1.5rem;font-weight:700;color:#0f172a}
+.btn:hover{ opacity: .9; }
+
+.btn-light{
+  border-radius: 0.75rem;
+  border: 1px solid #cbd5e1;            /* slate-300 */
+  background: #ffffff;
+  color: #0f172a;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  cursor: pointer;
+}
+
+.btn-danger{
+  border-radius: 0.75rem;
+  border: 1px solid #dc2626;            /* red-600 */
+  background: #dc2626;
+  color: #ffffff;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  cursor: pointer;
+}
+
+/* Inputs */
+.input{
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid #cbd5e1;            /* slate-300 */
+  background: #ffffff;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+/* Labels */
+.lbl{ font-size: 0.75rem; color: #64748b; } /* text-xs slate-500 */
+
+/* Cards */
+.card{
+  border-radius: 0.75rem;
+  background: #ffffff;
+  padding: 1rem;
+  border: 1px solid rgba(15,23,42,.08); /* subtle border */
+  box-shadow: 0 1px 2px rgba(0,0,0,.05);
+}
+
+/* Badges */
+.badge{
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #cbd5e1;            /* slate-300 */
+  border-radius: 999px;                  /* full */
+  padding: 0.125rem 0.5rem;              /* py-0.5 px-2 */
+  font-size: 0.75rem;                    /* text-xs */
+  line-height: 1rem;
+  color: #0f172a;
+}
+
+/* Dialog / modal */
+.modal{ border: 0; padding: 0; }
+.modal::backdrop{ background: rgba(2,6,23,0.55); } /* slate-950 ~ 0.55 */
+
+.modal-card{
+  width: min(92vw, 48rem);
+  margin: 10vh auto;
+  border-radius: 0.75rem;
+  background: #ffffff;
+  padding: 1rem;
+  border: 1px solid rgba(15,23,42,.08);
+  box-shadow: 0 10px 30px rgba(0,0,0,.2);
+}
+
+/* Project / Task visuals */
+.project-title{ font-weight: 600; font-size: 1rem; }
+
+.task-row{
+  display: grid;
+  grid-template-columns: auto 1fr auto; /* [auto, 1fr, auto] */
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid #e2e8f0;     /* slate-200 */
+  padding: 0.5rem 0;
+}
+.task-title{ font-size: 0.875rem; }

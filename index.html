@@ -3,89 +3,123 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>IT Dashboard</title>
-  <!-- Tailwind (CDN for fast start; can switch to build later) -->
+  <title>Projects & Tasks</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Chart.js for visuals -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="assets/styles.css" />
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-900">
   <header class="border-b bg-white">
     <div class="mx-auto max-w-6xl px-4 py-4 flex items-center gap-4">
-      <img src="assets/logo.svg" alt="Logo" class="h-8 w-8" />
-      <h1 class="text-xl font-semibold">IT Dashboard</h1>
-      <nav class="ml-auto flex gap-4 text-sm">
-        <a class="hover:underline" href="#kpis">KPIs</a>
-        <a class="hover:underline" href="#charts">Charts</a>
-        <a class="hover:underline" href="#table">Data</a>
-        <a class="hover:underline" href="#about">About</a>
+      <h1 class="text-xl font-semibold">Projects & Tasks</h1>
+      <nav class="ml-auto flex flex-wrap gap-2 text-sm">
+        <button id="btn-export" class="btn">Export JSON</button>
+        <label class="btn cursor-pointer">
+          Import JSON
+          <input id="file-import" type="file" accept="application/json" class="hidden" />
+        </label>
+        <button id="btn-reset" class="btn btn-danger">Reset (local)</button>
       </nav>
     </div>
   </header>
 
-  <main class="mx-auto max-w-6xl px-4 py-8 space-y-10">
-    <!-- KPIs -->
-    <section id="kpis" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <div class="kpi-card">
-        <div class="kpi-label">Open Tickets</div>
-        <div class="kpi-value" id="kpi-open">—</div>
+  <main class="mx-auto max-w-6xl px-4 py-6 space-y-8">
+
+    <!-- Agents -->
+    <section class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold">Agents</h2>
+        <form id="form-agent" class="flex gap-2">
+          <input id="agent-name" class="input" type="text" placeholder="Add agent name" required />
+          <button class="btn" type="submit">Add</button>
+        </form>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Closed (30d)</div>
-        <div class="kpi-value" id="kpi-closed">—</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Avg. Resolution (hrs)</div>
-        <div class="kpi-value" id="kpi-avg">—</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">SLA % (30d)</div>
-        <div class="kpi-value" id="kpi-sla">—</div>
-      </div>
+      <ul id="agent-list" class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3"></ul>
     </section>
 
-    <!-- Charts -->
-    <section id="charts" class="space-y-6">
-      <h2 class="text-lg font-semibold">Trends</h2>
-      <div class="rounded-xl bg-white p-4 shadow">
-        <canvas id="ticketsByDay"></canvas>
+    <!-- Projects -->
+    <section class="space-y-4">
+      <div class="flex items-center justify-between gap-4">
+        <h2 class="text-lg font-semibold">Projects</h2>
+        <div class="flex gap-2">
+          <input id="project-search" class="input" placeholder="Search projects…" />
+          <button id="btn-new-project" class="btn">New Project</button>
+        </div>
       </div>
-      <div class="rounded-xl bg-white p-4 shadow">
-        <canvas id="categoryBreakdown"></canvas>
-      </div>
-    </section>
 
-    <!-- Table -->
-    <section id="table" class="space-y-4">
-      <h2 class="text-lg font-semibold">Recent Tickets</h2>
-      <div class="rounded-xl bg-white p-4 shadow overflow-auto">
-        <table class="min-w-full text-sm">
-          <thead class="border-b bg-slate-100">
-            <tr>
-              <th class="py-2 px-3 text-left">ID</th>
-              <th class="py-2 px-3 text-left">Title</th>
-              <th class="py-2 px-3 text-left">Category</th>
-              <th class="py-2 px-3 text-left">Status</th>
-              <th class="py-2 px-3 text-left">Created</th>
-            </tr>
-          </thead>
-          <tbody id="tickets-body"></tbody>
-        </table>
+      <div id="project-list" class="grid gap-4">
+        <!-- Project cards injected here -->
       </div>
-    </section>
-
-    <section id="about" class="prose max-w-none">
-      <h2>About</h2>
-      <p>This is a lightweight, static dashboard hosted on GitHub Pages. Data is read from <code>/data/sample.json</code>. Swap in your own data or wire up an API later.</p>
     </section>
   </main>
 
-  <footer class="mt-10 border-t bg-white">
-    <div class="mx-auto max-w-6xl px-4 py-6 text-xs text-slate-500">
-      © <span id="year"></span> IT Dashboard
-    </div>
-  </footer>
+  <!-- New/Edit Project Modal -->
+  <dialog id="project-modal" class="modal">
+    <form id="form-project" method="dialog" class="modal-card">
+      <h3 class="text-lg font-semibold mb-3" id="project-modal-title">New Project</h3>
+      <input type="hidden" id="project-id" />
+      <div class="grid gap-3">
+        <label class="grid gap-1">
+          <span class="lbl">Title</span>
+          <input id="project-title" class="input" required />
+        </label>
+        <label class="grid gap-1">
+          <span class="lbl">Notes (optional)</span>
+          <textarea id="project-notes" class="input h-28"></textarea>
+        </label>
+        <div class="grid gap-1 sm:grid-cols-2">
+          <label class="grid gap-1">
+            <span class="lbl">Due date (optional)</span>
+            <input id="project-date" type="date" class="input" />
+          </label>
+          <label class="grid gap-1">
+            <span class="lbl">Due time (optional)</span>
+            <input id="project-time" type="time" class="input" />
+          </label>
+        </div>
+      </div>
+      <div class="mt-4 flex justify-end gap-2">
+        <button type="button" class="btn-light" onclick="window.pm.ui.closeProject()">Cancel</button>
+        <button class="btn" type="submit">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- New/Edit Task Modal -->
+  <dialog id="task-modal" class="modal">
+    <form id="form-task" method="dialog" class="modal-card">
+      <h3 class="text-lg font-semibold mb-3" id="task-modal-title">New Task</h3>
+      <input type="hidden" id="task-id" />
+      <input type="hidden" id="task-project-id" />
+      <div class="grid gap-3">
+        <label class="grid gap-1">
+          <span class="lbl">Title</span>
+          <input id="task-title" class="input" required />
+        </label>
+        <label class="grid gap-1">
+          <span class="lbl">Notes (optional)</span>
+          <textarea id="task-notes" class="input h-28"></textarea>
+        </label>
+        <div class="grid gap-1 sm:grid-cols-2">
+          <label class="grid gap-1">
+            <span class="lbl">Date (optional)</span>
+            <input id="task-date" type="date" class="input" />
+          </label>
+          <label class="grid gap-1">
+            <span class="lbl">Time (optional)</span>
+            <input id="task-time" type="time" class="input" />
+          </label>
+        </div>
+        <label class="grid gap-1">
+          <span class="lbl">Assign agent (optional)</span>
+          <select id="task-agent" class="input"></select>
+        </label>
+      </div>
+      <div class="mt-4 flex justify-end gap-2">
+        <button type="button" class="btn-light" onclick="window.pm.ui.closeTask()">Cancel</button>
+        <button class="btn" type="submit">Save</button>
+      </div>
+    </form>
+  </dialog>
 
   <script src="js/app.js"></script>
 </body>
