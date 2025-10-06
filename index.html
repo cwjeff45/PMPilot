@@ -2,125 +2,181 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Projects & Tasks</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="assets/styles.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PM Pilot</title>
+
+  <!-- External stylesheet -->
+  <link rel="stylesheet" href="styles.css">
 </head>
-<body class="min-h-screen bg-slate-50 text-slate-900">
-  <header class="border-b bg-white">
-    <div class="mx-auto max-w-6xl px-4 py-4 flex items-center gap-4">
-      <h1 class="text-xl font-semibold">Projects & Tasks</h1>
-      <nav class="ml-auto flex flex-wrap gap-2 text-sm">
-        <button id="btn-export" class="btn">Export JSON</button>
-        <label class="btn cursor-pointer">
-          Import JSON
-          <input id="file-import" type="file" accept="application/json" class="hidden" />
-        </label>
-        <button id="btn-reset" class="btn btn-danger">Reset (local)</button>
-      </nav>
-    </div>
+<body>
+  <header class="app-header">
+    <button id="menuToggle" class="icon-btn" aria-label="Open menu" aria-expanded="false" aria-controls="drawer">☰</button>
+      <!-- inside <header class="app-header"> ... -->
+    <button id="lockBtn" class="icon-btn" title="Lock">🔒</button>
+    <button id="settingsBtn" class="icon-btn" title="Settings">⚙️</button>
+    <h1 id="brandHome" role="button" tabindex="0">PM-Pilot</h1>
   </header>
 
-  <main class="mx-auto max-w-6xl px-4 py-6 space-y-8">
+<main class="container">
+  <!-- Live clock -->
+  <div id="clockBar" class="clock-bar card"></div>
 
-    <!-- Agents -->
-    <section class="space-y-4">
-      <div class="flex items-center justify-between">
-        <h2 class="text-lg font-semibold">Agents</h2>
-        <form id="form-agent" class="flex gap-2">
-          <input id="agent-name" class="input" type="text" placeholder="Add agent name" required />
-          <button class="btn" type="submit">Add</button>
-        </form>
-      </div>
-      <ul id="agent-list" class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3"></ul>
-    </section>
+  <section id="view"></section>
+  <div id="addBar" class="addbar" hidden>
+    <button id="addProjectBtn" class="btn" type="button">Add Project</button>
+  </div>
+</main>
 
-    <!-- Projects -->
-    <section class="space-y-4">
-      <div class="flex items-center justify-between gap-4">
-        <h2 class="text-lg font-semibold">Projects</h2>
-        <div class="flex gap-2">
-          <input id="project-search" class="input" placeholder="Search projects…" />
-          <button id="btn-new-project" class="btn">New Project</button>
-        </div>
-      </div>
 
-      <div id="project-list" class="grid gap-4">
-        <!-- Project cards injected here -->
-      </div>
-    </section>
+
+  <main class="container">
+    <section id="view"></section>
+    <div id="addBar" class="addbar" hidden>
+      <button id="addProjectBtn" class="btn" type="button">Add Project</button>
+    </div>
   </main>
 
-  <!-- New/Edit Project Modal -->
-  <dialog id="project-modal" class="modal">
-    <form id="form-project" method="dialog" class="modal-card">
-      <h3 class="text-lg font-semibold mb-3" id="project-modal-title">New Project</h3>
-      <input type="hidden" id="project-id" />
-      <div class="grid gap-3">
-        <label class="grid gap-1">
+  <!-- Backdrop -->
+  <div id="backdrop" class="backdrop" hidden></div>
+
+  <!-- Agents Drawer -->
+  <aside id="drawer" class="drawer" aria-hidden="true">
+    <div class="drawer-header">
+      <h2>Agents</h2>
+      <button id="drawerClose" class="icon-btn" aria-label="Close menu">×</button>
+    </div>
+    <form id="agentForm" class="row" autocomplete="off" style="padding:12px 16px">
+      <input id="agentInput" class="input" placeholder="Add agent name" required />
+      <button class="btn" type="submit">Add</button>
+    </form>
+    <ul id="agentList" class="list"></ul>
+    <div class="row" style="margin-top:auto;padding:12px 16px;border-top:1px solid var(--border)">
+      <button id="exportAgents" class="btn-light" type="button">Export JSON</button>
+      <label class="btn-light" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
+        Import JSON <input id="importAgents" type="file" accept="application/json" hidden />
+      </label>
+      <button id="resetAgents" class="btn-light" type="button">Reset</button>
+    </div>
+  </aside>
+
+  <!-- Project Modal -->
+  <dialog id="projectDialog">
+    <form id="projectForm" class="modal-card">
+      <h3 style="margin:0;">New Project</h3>
+      <div class="modal-grid">
+        <label class="grid">
           <span class="lbl">Title</span>
-          <input id="project-title" class="input" required />
+          <input id="pTitle" class="input" required />
         </label>
-        <label class="grid gap-1">
+        <label class="grid">
           <span class="lbl">Notes (optional)</span>
-          <textarea id="project-notes" class="input h-28"></textarea>
+          <textarea id="pNotes" class="input" rows="4"></textarea>
         </label>
-        <div class="grid gap-1 sm:grid-cols-2">
-          <label class="grid gap-1">
+        <div class="modal-row">
+          <label class="grid">
             <span class="lbl">Due date (optional)</span>
-            <input id="project-date" type="date" class="input" />
+            <input id="pDate" class="input" type="date" />
           </label>
-          <label class="grid gap-1">
+          <label class="grid">
             <span class="lbl">Due time (optional)</span>
-            <input id="project-time" type="time" class="input" />
+            <input id="pTime" class="input" type="time" />
           </label>
         </div>
       </div>
-      <div class="mt-4 flex justify-end gap-2">
-        <button type="button" class="btn-light" onclick="window.pm.ui.closeProject()">Cancel</button>
-        <button class="btn" type="submit">Save</button>
+      <div class="modal-actions">
+        <button type="button" class="btn-light" id="cancelProject">Cancel</button>
+        <button id="projectSaveBtn" type="submit" class="btn">Save</button>
       </div>
     </form>
   </dialog>
 
-  <!-- New/Edit Task Modal -->
-  <dialog id="task-modal" class="modal">
-    <form id="form-task" method="dialog" class="modal-card">
-      <h3 class="text-lg font-semibold mb-3" id="task-modal-title">New Task</h3>
-      <input type="hidden" id="task-id" />
-      <input type="hidden" id="task-project-id" />
-      <div class="grid gap-3">
-        <label class="grid gap-1">
+  <!-- Task Modal -->
+  <dialog id="taskDialog">
+    <form id="taskForm" class="modal-card">
+      <input type="hidden" id="tId" />
+      <h3 style="margin:0;" id="taskTitleLabel">New Task</h3>
+      <div class="modal-grid">
+        <label class="grid">
           <span class="lbl">Title</span>
-          <input id="task-title" class="input" required />
+          <input id="tTitle" class="input" required />
         </label>
-        <label class="grid gap-1">
+        <label class="grid">
           <span class="lbl">Notes (optional)</span>
-          <textarea id="task-notes" class="input h-28"></textarea>
+          <textarea id="tNotes" class="input" rows="3"></textarea>
         </label>
-        <div class="grid gap-1 sm:grid-cols-2">
-          <label class="grid gap-1">
-            <span class="lbl">Date (optional)</span>
-            <input id="task-date" type="date" class="input" />
+        <div class="modal-row">
+          <label class="grid">
+            <span class="lbl">Start date</span>
+            <input id="tStart" class="input" type="date" required />
           </label>
-          <label class="grid gap-1">
-            <span class="lbl">Time (optional)</span>
-            <input id="task-time" type="time" class="input" />
+          <label class="grid">
+            <span class="lbl">End date (optional)</span>
+            <input id="tEnd" class="input" type="date" />
           </label>
         </div>
-        <label class="grid gap-1">
+        <label class="grid">
           <span class="lbl">Assign agent (optional)</span>
-          <select id="task-agent" class="input"></select>
+          <select id="tAgent" class="input"></select>
         </label>
       </div>
-      <div class="mt-4 flex justify-end gap-2">
-        <button type="button" class="btn-light" onclick="window.pm.ui.closeTask()">Cancel</button>
-        <button class="btn" type="submit">Save</button>
+      <div class="modal-actions">
+        <button type="button" class="btn-light" id="cancelTask">Cancel</button>
+        <button id="taskSaveBtn" type="submit" class="btn">Save Task</button>
       </div>
     </form>
   </dialog>
 
-  <script src="js/app.js"></script>
+  <!-- Notice toggle + dropdown panel -->
+<button id="noticeToggle" class="notice-toggle" aria-expanded="false" aria-controls="noticePanel" title="Notices">
+  Notices
+</button>
+<div id="noticePanel" class="notice-panel" hidden aria-live="polite"></div>
+
+<!-- Lock / Login overlay -->
+<div id="authOverlay" class="auth" hidden>
+  <div class="auth-card" id="authUnlock" hidden>
+    <h2>Unlock PM Pilot</h2>
+    <form id="unlockForm" autocomplete="off">
+      <input id="unlockPass" class="input" type="password" placeholder="Enter passcode" required>
+      <div class="row" style="margin-top:8px">
+        <button class="btn" type="submit">Unlock</button>
+        <button class="btn-light" type="button" id="authReset">Reset Passcode</button>
+      </div>
+      <p class="small muted" id="unlockMsg"></p>
+    </form>
+  </div>
+
+  <div class="auth-card" id="authSetup" hidden>
+    <h2>Set Passcode</h2>
+    <form id="setupForm" autocomplete="new-password">
+      <input id="setupPass1" class="input" type="password" placeholder="New passcode (min 6)" required>
+      <input id="setupPass2" class="input" type="password" placeholder="Confirm passcode" required style="margin-top:8px">
+      <div class="row" style="margin-top:8px">
+        <button class="btn" type="submit">Save Passcode</button>
+      </div>
+      <p class="small muted">This protects access on this device only.</p>
+    </form>
+  </div>
+</div>
+
+<!-- Full Gantt Modal -->
+<dialog id="ganttDialog" class="modal">
+  <div class="modal-card wide">
+    <div class="flex items-center justify-between mb-2">
+      <h3 class="text-lg font-semibold" id="ganttTitle">Gantt</h3>
+      <div class="gantt-controls">
+        <button id="ganttZoomOut" class="btn-light" title="Zoom out">−</button>
+        <button id="ganttZoomFit" class="btn-light" title="Reset zoom">Fit</button>
+        <button id="ganttZoomIn" class="btn-light" title="Zoom in">+</button>
+        <button id="ganttClose" class="btn">Close</button>
+      </div>
+    </div>
+    <div id="ganttFull" class="gantt gantt-full"></div>
+  </div>
+</dialog>
+
+
+  <!-- Behavior -->
+  <script src="app.js" defer></script>
 </body>
 </html>
