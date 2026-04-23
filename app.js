@@ -231,7 +231,7 @@
       const meta = document.createElement("div"); meta.className = "meta"; meta.textContent = `Due: ${it.dueText}`;
       card.append(title, meta);
       card.addEventListener("click", () => {
-        renderProjectDetail(it.projectId);
+        renderProjectDetailList(it.projectId);
         if (it.type === "task" && it.taskId) {
           setTimeout(() => {
             const el = document.getElementById("task-" + it.taskId);
@@ -250,6 +250,7 @@
   let idleMs = 5 * 60 * 1000;  // 5 minutes
   let idleTimer = null;
   function resetIdleTimer() {
+    if (!authOverlay) return;
     // Only run when a passcode exists and the app is not currently locked
     if (!getPassHash()) return;
     if (authOverlay && !authOverlay.hidden) return;
@@ -338,7 +339,7 @@
         );
         writeAgents(list);
         renderAgents();
-        if (currentProjectId) renderProjectDetail(currentProjectId);
+        if (currentProjectId) renderProjectDetailList(currentProjectId);
       });
 
       const rm = document.createElement("button");
@@ -347,7 +348,7 @@
       rm.addEventListener("click", () => {
         writeAgents(readAgents().filter((a) => a.name !== agent.name));
         renderAgents();
-        if (currentProjectId) renderProjectDetail(currentProjectId);
+        if (currentProjectId) renderProjectDetailList(currentProjectId);
         renderNoticePanel?.();
       });
 
@@ -373,7 +374,7 @@
     }
     aInput.value = "";
     renderAgents();
-    if (currentProjectId) renderProjectDetail(currentProjectId);
+    if (currentProjectId) renderProjectDetailList(currentProjectId);
   });
 
   exportAgents.addEventListener("click", () => {
@@ -399,7 +400,7 @@
       normalized.forEach(a => { map.set(a.name, a); });
       writeAgents(Array.from(map.values()).sort((a,b)=>a.name.localeCompare(b.name)));
       renderAgents();
-      if (currentProjectId) renderProjectDetail(currentProjectId);
+      if (currentProjectId) renderProjectDetailList(currentProjectId);
       renderNoticePanel();
     } catch {
       alert('Invalid JSON. Expect ["Alice"] or {"agents":[...]}');
@@ -412,7 +413,7 @@
     if (!confirm("Clear local agents?")) return;
     writeAgents([]);
     renderAgents();
-    if (currentProjectId) renderProjectDetail(currentProjectId);
+    if (currentProjectId) renderProjectDetailList(currentProjectId);
     renderNoticePanel();
   });
 
@@ -522,7 +523,7 @@
       const actions = document.createElement("div"); actions.className = "proj-actions";
       const open = document.createElement("button");
       open.className = "btn-light"; open.type="button"; open.textContent = "Open";
-      open.addEventListener("click", () => renderProjectDetail(pr.id));
+      open.addEventListener("click", () => renderProjectDetailList(pr.id));
 
       const del = document.createElement("button");
       del.className = "del"; del.textContent = "×"; del.title = "Delete project";
@@ -586,41 +587,19 @@
       if (proj.status === "complete") renderProjectsList("completed");
     });
 
-    // Export buttons
+    // Export button
     const exportWrap = document.createElement("div");
-    exportWrap.style.display = "flex";
-    exportWrap.style.gap = "6px";
+    exportWrap.className = "export-actions";
     exportWrap.style.marginLeft = "12px";
 
-    const btnJson = document.createElement("button");
-    btnJson.className = "btn-light";
-    btnJson.type = "button";
-    btnJson.textContent = "Export JSON";
-    btnJson.title = "Full project with tasks";
-    btnJson.addEventListener("click", ()=> exportProjectJSON(pr));
+    const btnPdf = document.createElement("button");
+    btnPdf.className = "btn-light";
+    btnPdf.type = "button";
+    btnPdf.textContent = "Export PDF";
+    btnPdf.title = "Print the current project view as a PDF";
+    btnPdf.addEventListener("click", ()=> exportProjectPDF(pr));
 
-    const btnCsv = document.createElement("button");
-    btnCsv.className = "btn-light";
-    btnCsv.type = "button";
-    btnCsv.textContent = "Export CSV";
-    btnCsv.title = "Tasks table (deadlines, agents, notes)";
-    btnCsv.addEventListener("click", ()=> exportProjectCSV(pr));
-
-    const btnIcs = document.createElement("button");
-    btnIcs.className = "btn-light";
-    btnIcs.type = "button";
-    btnIcs.textContent = "Export ICS";
-    btnIcs.title = "Calendar events for due date + tasks";
-    btnIcs.addEventListener("click", ()=> exportProjectICS(pr));
-
-    const btnPng = document.createElement("button");
-    btnPng.className = "btn-light";
-    btnPng.type = "button";
-    btnPng.textContent = "Export Gantt PNG";
-    btnPng.title = "Snapshot of the Gantt";
-    btnPng.addEventListener("click", ()=> exportProjectGanttPNG(pr));
-
-    exportWrap.append(btnJson, btnCsv, btnIcs, btnPng);
+    exportWrap.append(btnPdf);
 
     // Open full-screen Gantt
     const openGanttBtn = document.createElement("button");
@@ -720,7 +699,7 @@
           const proj = findProject(pr.id);
           proj.tasks = proj.tasks.filter((x) => x.id !== task.id);
           saveProject(proj);
-          renderProjectDetail(pr.id);
+          renderProjectDetailList(pr.id);
           renderNoticePanel();
         });
         right.append(edit, del);
@@ -733,6 +712,212 @@
     listCard.appendChild(taskWrap);
     wrap.appendChild(listCard);
     view.appendChild(wrap);
+  }
+
+  function renderProjectDetailList(projectId) {
+    const pr = findProject(projectId);
+    if (!pr) { renderProjectsList(); return; }
+    currentProjectId = pr.id;
+    pr.tasks = Array.isArray(pr.tasks) ? pr.tasks : [];
+
+    view.innerHTML = "";
+    addBar.hidden = true;
+
+    const head = document.createElement("div");
+    head.className = "detail-head";
+
+    const back = document.createElement("button");
+    back.className = "btn-light";
+    back.textContent = "Back";
+    back.addEventListener("click", () => { renderProjectsList(); renderNoticePanel(); });
+
+    const title = document.createElement("h2");
+    title.textContent = pr.title;
+
+    const statusSel = document.createElement("select");
+    ["active","onhold","complete"].forEach((s) => {
+      const o = document.createElement("option");
+      o.value = s;
+      o.textContent = s === "active" ? "Active" : s === "onhold" ? "On Hold" : "Complete";
+      statusSel.appendChild(o);
+    });
+    pr.status = pr.status || "active";
+    statusSel.value = pr.status;
+    statusSel.className = "input";
+    statusSel.style.maxWidth = "140px";
+    statusSel.style.marginLeft = "12px";
+    statusSel.title = "Project status";
+    statusSel.addEventListener("change", () => {
+      const proj = findProject(pr.id);
+      proj.status = statusSel.value;
+      saveProject(proj);
+      if (proj.status === "complete") renderProjectsList("completed");
+    });
+
+    const exportWrap = document.createElement("div");
+    exportWrap.className = "export-actions";
+    exportWrap.style.marginLeft = "12px";
+
+    const btnPdf = document.createElement("button");
+    btnPdf.className = "btn-light";
+    btnPdf.type = "button";
+    btnPdf.textContent = "Export PDF";
+    btnPdf.title = "Print the current project view as a PDF";
+    btnPdf.addEventListener("click", () => exportProjectPDF(pr));
+    exportWrap.append(btnPdf);
+
+    const openGanttBtn = document.createElement("button");
+    openGanttBtn.className = "btn-light";
+    openGanttBtn.textContent = "Open Gantt";
+    openGanttBtn.title = "View Gantt full-screen";
+    openGanttBtn.addEventListener("click", () => openGanttModal(pr.id));
+
+    const addTaskBtn = document.createElement("button");
+    addTaskBtn.className = "btn";
+    addTaskBtn.textContent = "Add Task";
+    addTaskBtn.style.marginLeft = "auto";
+    addTaskBtn.addEventListener("click", () => openTaskModal(pr.id));
+
+    head.append(back, title, statusSel, exportWrap, openGanttBtn, addTaskBtn);
+    view.appendChild(head);
+
+    if (pr.notes || pr.dueDate) {
+      const info = document.createElement("div");
+      info.className = "card";
+      const bits = [];
+      if (pr.dueDate) {
+        bits.push(`Due: ${new Date(pr.dueDate + (pr.dueTime ? "T" + pr.dueTime : "T00:00"))
+          .toLocaleString([], { dateStyle:"medium", timeStyle: pr.dueTime ? "short" : undefined })}`);
+      }
+      if (pr.notes) bits.push(pr.notes);
+      info.textContent = bits.join(" | ");
+      view.appendChild(info);
+    }
+
+    const timelineCard = document.createElement("aside");
+    timelineCard.className = "card timeline-panel";
+
+    const timelineTitle = document.createElement("h3");
+    timelineTitle.className = "timeline-title";
+    timelineTitle.textContent = "Timeline";
+
+    const timelineCopy = document.createElement("div");
+    timelineCopy.className = "small muted timeline-copy";
+    timelineCopy.textContent = "Quick schedule view. Use Open Gantt when you need the larger timeline.";
+
+    timelineCard.append(timelineTitle, timelineCopy);
+    timelineCard.appendChild(buildGantt(pr, {
+      maxHeight: "360px",
+      rowH: 34,
+      labelW: 300,
+      minInnerWidth: 720,
+      zoom: 1
+    }));
+
+    const workspace = document.createElement("section");
+    workspace.className = "project-workspace";
+    workspace.appendChild(timelineCard);
+
+    const listCard = document.createElement("div");
+    listCard.className = "card tasks-panel";
+
+    const listHeader = document.createElement("div");
+    listHeader.className = "task-list-header";
+
+    const listTitle = document.createElement("h3");
+    listTitle.style.margin = "0";
+    listTitle.textContent = "Tasks";
+
+    const taskCount = document.createElement("div");
+    taskCount.className = "small muted";
+    taskCount.textContent = `${pr.tasks.length} task${pr.tasks.length === 1 ? "" : "s"}`;
+
+    listHeader.append(listTitle, taskCount);
+    listCard.appendChild(listHeader);
+
+    const taskWrap = document.createElement("div");
+    taskWrap.className = "task-list";
+
+    if (!pr.tasks.length) {
+      const empty = document.createElement("div");
+      empty.className = "task-empty";
+      empty.textContent = "No tasks yet.";
+      taskWrap.appendChild(empty);
+    } else {
+      pr.tasks.forEach((task) => {
+        const row = document.createElement("div");
+        row.className = "task task-condensed";
+        row.id = "task-" + task.id;
+        row.title = "Double-click to edit";
+
+        const left = document.createElement("div");
+        left.className = "left";
+
+        const titleEl = document.createElement("div");
+        titleEl.className = "task-title";
+        titleEl.textContent = task.title;
+
+        const meta = document.createElement("div");
+        meta.className = "task-meta";
+
+        const dateChip = document.createElement("span");
+        dateChip.className = "task-chip";
+        dateChip.textContent = task.end && task.end !== task.start
+          ? `${task.start} to ${task.end}`
+          : task.start;
+        meta.appendChild(dateChip);
+
+        if (task.agent) {
+          const agentChip = document.createElement("span");
+          agentChip.className = "task-chip task-chip-agent";
+          agentChip.textContent = task.agent;
+          meta.appendChild(agentChip);
+        }
+
+        const note = document.createElement("div");
+        note.className = "small note task-note-inline";
+        if (task.notes && task.notes.trim()) note.textContent = task.notes;
+        else {
+          note.textContent = "No notes yet.";
+          note.classList.add("muted");
+        }
+
+        left.append(titleEl, meta, note);
+
+        const right = document.createElement("div");
+        right.className = "row task-actions";
+
+        const edit = document.createElement("button");
+        edit.className = "btn-light";
+        edit.textContent = "Edit";
+        edit.addEventListener("click", () => renderTaskEditor(pr.id, task));
+
+        const del = document.createElement("button");
+        del.className = "btn-light";
+        del.textContent = "Delete";
+        del.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          const proj = findProject(pr.id);
+          proj.tasks = proj.tasks.filter((x) => x.id !== task.id);
+          saveProject(proj);
+          renderProjectDetailList(pr.id);
+          renderNoticePanel();
+        });
+
+        right.append(edit, del);
+        row.append(left, right);
+        row.addEventListener("dblclick", () => renderTaskEditor(pr.id, task));
+        taskWrap.appendChild(row);
+      });
+    }
+
+    listCard.appendChild(taskWrap);
+    workspace.appendChild(listCard);
+    view.appendChild(workspace);
+  }
+
+  function renderTaskEditor(projectId, task) {
+    openTaskModal(projectId, task);
   }
 
   /* ---------- Gantt builder (compact + modal) ---------- */
@@ -888,6 +1073,19 @@
 
   function exportProjectJSON(pr){
     downloadBlob(`${pr.title || "project"}.json`, JSON.stringify(pr, null, 2), "application/json");
+  }
+
+  function exportProjectPDF(pr){
+    const previousTitle = document.title;
+    document.body.classList.add("print-project");
+    document.body.dataset.printProjectId = pr.id;
+    document.title = `${pr.title || "project"} - PM Pilot`;
+    window.print();
+    window.setTimeout(() => {
+      document.body.classList.remove("print-project");
+      delete document.body.dataset.printProjectId;
+      document.title = previousTitle;
+    }, 100);
   }
 
   function exportProjectCSV(pr){
@@ -1134,7 +1332,7 @@
 
       tId.value = "";
       closeDialog(tDlg);
-      renderProjectDetail(pr.id);
+      renderProjectDetailList(pr.id);
       renderNoticePanel();
     } catch (err) {
       console.error(err);
@@ -1324,8 +1522,6 @@
   renderAgents();
   renderProjectsList();
   renderNoticePanel();
-  showAuth();
-  resetIdleTimer(); // start idle timer once app is up
 
   /* ---------- Timers ---------- */
   setInterval(updateClock, 1000);
