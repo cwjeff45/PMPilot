@@ -4,46 +4,29 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PM Pilot</title>
-
-  <!-- External stylesheet -->
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header class="app-header">
-    <button id="menuToggle" class="icon-btn" aria-label="Open menu" aria-expanded="false" aria-controls="drawer">☰</button>
-      <!-- inside <header class="app-header"> ... -->
-    <button id="lockBtn" class="icon-btn" title="Lock">🔒</button>
-    <button id="settingsBtn" class="icon-btn" title="Settings">⚙️</button>
+    <button id="menuToggle" class="icon-btn" aria-label="Open menu" aria-expanded="false" aria-controls="drawer">&#9776;</button>
+    <button id="settingsBtn" class="icon-btn" title="Settings">&#9881;</button>
     <h1 id="brandHome" role="button" tabindex="0">PM-Pilot</h1>
   </header>
 
-<main class="container">
-  <!-- Live clock -->
-  <div id="clockBar" class="clock-bar card"></div>
-
-  <section id="view"></section>
-  <div id="addBar" class="addbar" hidden>
-    <button id="addProjectBtn" class="btn" type="button">Add Project</button>
-  </div>
-</main>
-
-
-
   <main class="container">
+    <div id="clockBar" class="clock-bar card"></div>
     <section id="view"></section>
     <div id="addBar" class="addbar" hidden>
       <button id="addProjectBtn" class="btn" type="button">Add Project</button>
     </div>
   </main>
 
-  <!-- Backdrop -->
   <div id="backdrop" class="backdrop" hidden></div>
 
-  <!-- Agents Drawer -->
   <aside id="drawer" class="drawer" aria-hidden="true">
     <div class="drawer-header">
       <h2>Agents</h2>
-      <button id="drawerClose" class="icon-btn" aria-label="Close menu">×</button>
+      <button id="drawerClose" class="icon-btn" aria-label="Close menu">&times;</button>
     </div>
     <form id="agentForm" class="row" autocomplete="off" style="padding:12px 16px">
       <input id="agentInput" class="input" placeholder="Add agent name" required />
@@ -59,7 +42,6 @@
     </div>
   </aside>
 
-  <!-- Project Modal -->
   <dialog id="projectDialog">
     <form id="projectForm" class="modal-card">
       <h3 style="margin:0;">New Project</h3>
@@ -90,7 +72,6 @@
     </form>
   </dialog>
 
-  <!-- Task Modal -->
   <dialog id="taskDialog">
     <form id="taskForm" class="modal-card">
       <input type="hidden" id="tId" />
@@ -126,57 +107,26 @@
     </form>
   </dialog>
 
-  <!-- Notice toggle + dropdown panel -->
-<button id="noticeToggle" class="notice-toggle" aria-expanded="false" aria-controls="noticePanel" title="Notices">
-  Notices
-</button>
-<div id="noticePanel" class="notice-panel" hidden aria-live="polite"></div>
+  <button id="noticeToggle" class="notice-toggle" aria-expanded="false" aria-controls="noticePanel" title="Notices">
+    Notices
+  </button>
+  <div id="noticePanel" class="notice-panel" hidden aria-live="polite"></div>
 
-<!-- Lock / Login overlay -->
-<div id="authOverlay" class="auth" hidden>
-  <div class="auth-card" id="authUnlock" hidden>
-    <h2>Unlock PM Pilot</h2>
-    <form id="unlockForm" autocomplete="off">
-      <input id="unlockPass" class="input" type="password" placeholder="Enter passcode" required>
-      <div class="row" style="margin-top:8px">
-        <button class="btn" type="submit">Unlock</button>
-        <button class="btn-light" type="button" id="authReset">Reset Passcode</button>
+  <dialog id="ganttDialog" class="modal">
+    <div class="modal-card wide">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-lg font-semibold" id="ganttTitle">Gantt</h3>
+        <div class="gantt-controls">
+          <button id="ganttZoomOut" class="btn-light" title="Zoom out">&minus;</button>
+          <button id="ganttZoomFit" class="btn-light" title="Reset zoom">Fit</button>
+          <button id="ganttZoomIn" class="btn-light" title="Zoom in">+</button>
+          <button id="ganttClose" class="btn">Close</button>
+        </div>
       </div>
-      <p class="small muted" id="unlockMsg"></p>
-    </form>
-  </div>
-
-  <div class="auth-card" id="authSetup" hidden>
-    <h2>Set Passcode</h2>
-    <form id="setupForm" autocomplete="new-password">
-      <input id="setupPass1" class="input" type="password" placeholder="New passcode (min 6)" required>
-      <input id="setupPass2" class="input" type="password" placeholder="Confirm passcode" required style="margin-top:8px">
-      <div class="row" style="margin-top:8px">
-        <button class="btn" type="submit">Save Passcode</button>
-      </div>
-      <p class="small muted">This protects access on this device only.</p>
-    </form>
-  </div>
-</div>
-
-<!-- Full Gantt Modal -->
-<dialog id="ganttDialog" class="modal">
-  <div class="modal-card wide">
-    <div class="flex items-center justify-between mb-2">
-      <h3 class="text-lg font-semibold" id="ganttTitle">Gantt</h3>
-      <div class="gantt-controls">
-        <button id="ganttZoomOut" class="btn-light" title="Zoom out">−</button>
-        <button id="ganttZoomFit" class="btn-light" title="Reset zoom">Fit</button>
-        <button id="ganttZoomIn" class="btn-light" title="Zoom in">+</button>
-        <button id="ganttClose" class="btn">Close</button>
-      </div>
+      <div id="ganttFull" class="gantt gantt-full"></div>
     </div>
-    <div id="ganttFull" class="gantt gantt-full"></div>
-  </div>
-</dialog>
+  </dialog>
 
-
-  <!-- Behavior -->
   <script src="app.js" defer></script>
 </body>
 </html>
