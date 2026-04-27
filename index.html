@@ -44,7 +44,8 @@
 
   <dialog id="projectDialog">
     <form id="projectForm" class="modal-card">
-      <h3 style="margin:0;">New Project</h3>
+      <input type="hidden" id="pId" />
+      <h3 style="margin:0;" id="projectTitleLabel">New Project</h3>
       <div class="modal-grid">
         <label class="grid">
           <span class="lbl">Title</span>
@@ -67,7 +68,7 @@
       </div>
       <div class="modal-actions">
         <button type="button" class="btn-light" id="cancelProject">Cancel</button>
-        <button id="projectSaveBtn" type="submit" class="btn">Save</button>
+        <button id="projectSaveBtn" type="submit" class="btn">Save Project</button>
       </div>
     </form>
   </dialog>

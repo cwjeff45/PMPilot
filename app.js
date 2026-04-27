@@ -37,12 +37,31 @@
   /* ---------- General helpers ---------- */
   const $ = (id) => document.getElementById(id);
   const uid = () => "id_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const params = new URLSearchParams(window.location.search);
+  const isReadOnly = params.get("view") === "public" || params.get("readonly") === "1";
   const read  = (k, fb) => { try { return JSON.parse(localStorage.getItem(k)) ?? fb; } catch { return fb; } };
   const write = (k, v) => localStorage.setItem(k, JSON.stringify(v));
-  const readProjects = () => read(PROJECTS_KEY, []);
-  const writeProjects = (arr) => write(PROJECTS_KEY, arr);
-  const readAgents = () => normalizeAgents(read(AGENTS_KEY, []));
-  const writeAgents = (arr) => write(AGENTS_KEY, normalizeAgents(arr));
+  let sharedData = { projects: [], agents: [], loaded: false, error: "" };
+  function cloneProjects(arr){
+    return Array.isArray(arr) ? arr.map((project) => ({
+      ...project,
+      tasks: Array.isArray(project.tasks) ? project.tasks.map((task) => ({ ...task })) : []
+    })) : [];
+  }
+  function readProjects() {
+    return isReadOnly ? cloneProjects(sharedData.projects) : read(PROJECTS_KEY, []);
+  }
+  function writeProjects(arr) {
+    if (isReadOnly) return;
+    write(PROJECTS_KEY, arr);
+  }
+  function readAgents() {
+    return isReadOnly ? normalizeAgents(sharedData.agents) : normalizeAgents(read(AGENTS_KEY, []));
+  }
+  function writeAgents(arr) {
+    if (isReadOnly) return;
+    write(AGENTS_KEY, normalizeAgents(arr));
+  }
 
   const parseDate = (d) => (d ? new Date(d + "T00:00:00") : null);
   const daysBetween = (a, b) => Math.max(0, Math.round((parseDate(b) - parseDate(a)) / 86400000));
@@ -73,6 +92,36 @@
   function saveProject(updated){
     const all = readProjects().map((p) => (p.id === updated.id ? updated : p));
     writeProjects(all);
+  }
+
+  function configureAddBar({ label = "Add Project", hidden = false, onClick = null } = {}) {
+    if (!addBar || !addProjectBtn) return;
+    addProjectBtn.textContent = label;
+    addProjectBtn.onclick = onClick;
+    addProjectBtn.hidden = hidden;
+    addBar.hidden = hidden;
+  }
+
+  function buildPublicSnapshot() {
+    return {
+      exportedAt: new Date().toISOString(),
+      agents: readAgents(),
+      projects: readProjects()
+    };
+  }
+
+  function downloadPublicData() {
+    downloadBlob("shared-data.json", JSON.stringify(buildPublicSnapshot(), null, 2), "application/json;charset=utf-8");
+  }
+
+  function renderReadonlyBanner() {
+    if (!isReadOnly) return;
+    const card = document.createElement("div");
+    card.className = "card readonly-banner";
+    card.textContent = sharedData.error
+      ? sharedData.error
+      : "Read-only published view. Update shared-data.json in your GitHub Pages repo whenever you want followers to see the latest tasks.";
+    view.appendChild(card);
   }
 
   /* ---------- DOM refs ---------- */
@@ -119,11 +168,13 @@
   // Project modal
   const pDlg = $("projectDialog");
   const pForm = $("projectForm");
+  const pId = $("pId");
   const pTitle = $("pTitle");
   const pNotes = $("pNotes");
   const pDate = $("pDate");
   const pTime = $("pTime");
   const cancelProject = $("cancelProject");
+  const projectTitleLabel = $("projectTitleLabel");
   const projectSaveBtn = $("projectSaveBtn");
 
   // Task modal
@@ -150,6 +201,27 @@
   /* ---------- State ---------- */
   let currentProjectId = null;
   let projectsView = localStorage.getItem("pm_projects_view") || "active"; // "active" | "completed"
+
+  async function loadSharedData() {
+    if (!isReadOnly) return;
+    if (window.location.protocol === "file:") {
+      sharedData.error = "Read-only publishing only works from a hosted site like GitHub Pages.";
+      sharedData.loaded = true;
+      return;
+    }
+    try {
+      const res = await fetch("./shared-data.json", { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      sharedData.projects = cloneProjects(Array.isArray(json) ? json : json?.projects);
+      sharedData.agents = normalizeAgents(Array.isArray(json?.agents) ? json.agents : []);
+    } catch (err) {
+      console.error(err);
+      sharedData.error = "Could not load shared-data.json for the public view.";
+    } finally {
+      sharedData.loaded = true;
+    }
+  }
 
   /* ---------- Live clock ---------- */
   function updateClock() {
@@ -418,35 +490,65 @@
   });
 
   /* ---------- Projects ---------- */
-  function openProjectModal() {
-    pTitle.value = ""; pNotes.value = ""; pDate.value = ""; pTime.value = "";
+  function openProjectModal(project = null) {
+    if (isReadOnly) return;
+    pId.value = project?.id || "";
+    projectTitleLabel.textContent = project ? "Edit Project" : "New Project";
+    projectSaveBtn.textContent = project ? "Save Changes" : "Save Project";
+    pTitle.value = project?.title || "";
+    pNotes.value = project?.notes || "";
+    pDate.value = project?.dueDate || "";
+    pTime.value = project?.dueTime || "";
     showDialog(pDlg);
     setTimeout(() => pTitle.focus(), 50);
   }
 
   function saveProjectSubmit(e) {
     e.preventDefault();
-    const p = {
-      id: uid(),
-      title: (pTitle.value || "").trim(),
-      notes: (pNotes.value || "").trim(),
-      dueDate: pDate.value || "",
-      dueTime: pTime.value || "",
-      status: "active",
-      tasks: [],
-    };
-    if (!p.title) { alert("Please enter a project title."); return; }
+    const title = (pTitle.value || "").trim();
+    if (!title) { alert("Please enter a project title."); return; }
+
+    const editingId = pId.value;
     const all = readProjects();
-    all.push(p);
+    if (editingId) {
+      const index = all.findIndex((project) => project.id === editingId);
+      if (index === -1) {
+        alert("Project not found.");
+        closeDialog(pDlg);
+        return;
+      }
+      all[index] = {
+        ...all[index],
+        title,
+        notes: (pNotes.value || "").trim(),
+        dueDate: pDate.value || "",
+        dueTime: pTime.value || ""
+      };
+    } else {
+      all.push({
+        id: uid(),
+        title,
+        notes: (pNotes.value || "").trim(),
+        dueDate: pDate.value || "",
+        dueTime: pTime.value || "",
+        status: "active",
+        tasks: []
+      });
+    }
     all.sort((a,b)=> (a.dueDate||"") && (b.dueDate||"") && a.dueDate!==b.dueDate
       ? a.dueDate.localeCompare(b.dueDate) : a.title.localeCompare(b.title));
     writeProjects(all);
+    pId.value = "";
     closeDialog(pDlg);
-    renderProjectsList();
+    if (editingId) renderProjectDetailList(editingId);
+    else renderProjectsList();
     renderNoticePanel();
   }
 
-  function viewElReset(){ view.innerHTML = ""; addBar.hidden = true; }
+  function viewElReset(){
+    view.innerHTML = "";
+    configureAddBar({ hidden: true });
+  }
 
   function renderProjectsList(which = projectsView) {
     projectsView = which;
@@ -460,6 +562,7 @@
     const filtered = list.filter(p => projectsView === "completed" ? p.status==="complete" : p.status!=="complete");
 
     viewElReset();
+    renderReadonlyBanner();
 
     // Tabbar
     const tabs = document.createElement("div");
@@ -473,6 +576,16 @@
     t2.textContent = `Completed (${completedCount})`;
     t2.addEventListener("click", () => renderProjectsList("completed"));
     tabs.append(t1, t2);
+    if (!isReadOnly && projectsView !== "completed") {
+      const publish = document.createElement("button");
+      publish.className = "btn-light";
+      publish.type = "button";
+      publish.textContent = "Download Public JSON";
+      publish.title = "Use this file as shared-data.json in your GitHub Pages repo";
+      publish.style.marginLeft = "auto";
+      publish.addEventListener("click", downloadPublicData);
+      tabs.appendChild(publish);
+    }
     view.appendChild(tabs);
 
     if (!filtered.length) {
@@ -481,7 +594,7 @@
       const p = document.createElement("p"); p.className = "muted";
       p.textContent = projectsView === "completed" ? "No completed projects yet." : "No projects yet.";
       wrap.appendChild(p);
-      if (projectsView !== "completed") {
+      if (projectsView !== "completed" && !isReadOnly) {
         const btn = document.createElement("button");
         btn.className = "btn"; btn.type = "button"; btn.textContent = "Create Project";
         btn.addEventListener("click", openProjectModal);
@@ -489,7 +602,11 @@
       }
       empty.appendChild(wrap);
       view.appendChild(empty);
-      addBar.hidden = projectsView === "completed";
+      configureAddBar({
+        hidden: isReadOnly || projectsView === "completed",
+        label: "Add Project",
+        onClick: openProjectModal
+      });
       return;
     }
 
@@ -524,6 +641,16 @@
       const open = document.createElement("button");
       open.className = "btn-light"; open.type="button"; open.textContent = "Open";
       open.addEventListener("click", () => renderProjectDetailList(pr.id));
+      actions.append(open);
+
+      if (!isReadOnly) {
+        const edit = document.createElement("button");
+        edit.className = "btn-light";
+        edit.type = "button";
+        edit.textContent = "Edit";
+        edit.addEventListener("click", () => openProjectModal(pr));
+        actions.append(edit);
+      }
 
       const del = document.createElement("button");
       del.className = "del"; del.textContent = "×"; del.title = "Delete project";
@@ -534,15 +661,18 @@
         renderNoticePanel?.();
       });
 
-      actions.append(open);
-      if (projectsView !== "completed") card.append(h3, meta, notes, actions, del);
+      if (!isReadOnly && projectsView !== "completed") card.append(h3, meta, notes, actions, del);
       else card.append(h3, meta, notes, actions);
 
       grid.appendChild(card);
     });
 
     view.appendChild(grid);
-    addBar.hidden = projectsView === "completed";
+    configureAddBar({
+      hidden: isReadOnly || projectsView === "completed",
+      label: "Add Project",
+      onClick: openProjectModal
+    });
   }
 
   /* ---------- Project Detail + Gantt ---------- */
@@ -721,7 +851,12 @@
     pr.tasks = Array.isArray(pr.tasks) ? pr.tasks : [];
 
     view.innerHTML = "";
-    addBar.hidden = true;
+    renderReadonlyBanner();
+    configureAddBar({
+      hidden: isReadOnly,
+      label: "Add Task",
+      onClick: () => openTaskModal(pr.id)
+    });
 
     const head = document.createElement("div");
     head.className = "detail-head";
@@ -747,6 +882,7 @@
     statusSel.style.maxWidth = "140px";
     statusSel.style.marginLeft = "12px";
     statusSel.title = "Project status";
+    statusSel.disabled = isReadOnly;
     statusSel.addEventListener("change", () => {
       const proj = findProject(pr.id);
       proj.status = statusSel.value;
@@ -765,6 +901,15 @@
     btnPdf.title = "Print the current project view as a PDF";
     btnPdf.addEventListener("click", () => exportProjectPDF(pr));
     exportWrap.append(btnPdf);
+    if (!isReadOnly) {
+      const publishBtn = document.createElement("button");
+      publishBtn.className = "btn-light";
+      publishBtn.type = "button";
+      publishBtn.textContent = "Download Public JSON";
+      publishBtn.title = "Use this file as shared-data.json in your GitHub Pages repo";
+      publishBtn.addEventListener("click", downloadPublicData);
+      exportWrap.appendChild(publishBtn);
+    }
 
     const openGanttBtn = document.createElement("button");
     openGanttBtn.className = "btn-light";
@@ -772,13 +917,19 @@
     openGanttBtn.title = "View Gantt full-screen";
     openGanttBtn.addEventListener("click", () => openGanttModal(pr.id));
 
-    const addTaskBtn = document.createElement("button");
-    addTaskBtn.className = "btn";
-    addTaskBtn.textContent = "Add Task";
-    addTaskBtn.style.marginLeft = "auto";
-    addTaskBtn.addEventListener("click", () => openTaskModal(pr.id));
+    const detailActions = document.createElement("div");
+    detailActions.className = "detail-actions";
+    detailActions.style.marginLeft = "auto";
+    if (!isReadOnly) {
+      const editProjectBtn = document.createElement("button");
+      editProjectBtn.className = "btn-light";
+      editProjectBtn.type = "button";
+      editProjectBtn.textContent = "Edit Project";
+      editProjectBtn.addEventListener("click", () => openProjectModal(pr));
+      detailActions.appendChild(editProjectBtn);
+    }
 
-    head.append(back, title, statusSel, exportWrap, openGanttBtn, addTaskBtn);
+    head.append(back, title, statusSel, exportWrap, openGanttBtn, detailActions);
     view.appendChild(head);
 
     if (pr.notes || pr.dueDate) {
@@ -848,7 +999,7 @@
         const row = document.createElement("div");
         row.className = "task task-condensed";
         row.id = "task-" + task.id;
-        row.title = "Double-click to edit";
+        row.title = isReadOnly ? "Task details" : "Double-click to edit";
 
         const left = document.createElement("div");
         left.className = "left";
@@ -887,26 +1038,31 @@
         const right = document.createElement("div");
         right.className = "row task-actions";
 
-        const edit = document.createElement("button");
-        edit.className = "btn-light";
-        edit.textContent = "Edit";
-        edit.addEventListener("click", () => renderTaskEditor(pr.id, task));
+        if (!isReadOnly) {
+          const edit = document.createElement("button");
+          edit.className = "btn-light";
+          edit.textContent = "Edit";
+          edit.addEventListener("click", () => renderTaskEditor(pr.id, task));
 
-        const del = document.createElement("button");
-        del.className = "btn-light";
-        del.textContent = "Delete";
-        del.addEventListener("click", (ev) => {
-          ev.stopPropagation();
-          const proj = findProject(pr.id);
-          proj.tasks = proj.tasks.filter((x) => x.id !== task.id);
-          saveProject(proj);
-          renderProjectDetailList(pr.id);
-          renderNoticePanel();
-        });
+          const del = document.createElement("button");
+          del.className = "btn-light";
+          del.textContent = "Delete";
+          del.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            const proj = findProject(pr.id);
+            proj.tasks = proj.tasks.filter((x) => x.id !== task.id);
+            saveProject(proj);
+            renderProjectDetailList(pr.id);
+            renderNoticePanel();
+          });
 
-        right.append(edit, del);
-        row.append(left, right);
-        row.addEventListener("dblclick", () => renderTaskEditor(pr.id, task));
+          right.append(edit, del);
+        }
+        row.appendChild(left);
+        if (!isReadOnly) row.appendChild(right);
+        if (!isReadOnly) {
+          row.addEventListener("dblclick", () => renderTaskEditor(pr.id, task));
+        }
         taskWrap.appendChild(row);
       });
     }
@@ -1286,6 +1442,7 @@
   }
 
   function openTaskModal(projectId, task = null) {
+    if (isReadOnly) return;
     currentProjectId = projectId;
     tId.value = task ? task.id : "";
     taskTitleLabel.textContent = task ? "Edit Task" : "New Task";
@@ -1304,6 +1461,7 @@
 
   function saveTaskSubmit(e) {
     e.preventDefault();
+    if (isReadOnly) return;
     try {
       const title = (tTitle.value || "").trim();
       const start = tStart.value;
@@ -1437,14 +1595,11 @@
     noticePanel?.setAttribute?.("hidden","");
     noticeToggle?.setAttribute?.("aria-expanded","false");
     renderProjectsList("active");
-    addBar.hidden = false;
   }
   brandHome?.addEventListener("click", goHome);
   brandHome?.addEventListener("keydown", (e)=> {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); goHome(); }
   });
-
-  addProjectBtn.addEventListener("click", openProjectModal);
 
   pForm.addEventListener("submit", saveProjectSubmit);
   projectSaveBtn.addEventListener("click", (e) => { e.preventDefault(); saveProjectSubmit(e); });
@@ -1518,10 +1673,19 @@
     const time = now.toLocaleTimeString([], { hour:"2-digit", minute:"2-digit", second:"2-digit" });
     clockBar.textContent = `${date} • ${time}`;
   }
-  updateClock();
-  renderAgents();
-  renderProjectsList();
-  renderNoticePanel();
+  async function init() {
+    if (isReadOnly) {
+      settingsBtn?.setAttribute("hidden", "");
+      menuToggle?.setAttribute("hidden", "");
+      drawer?.setAttribute("hidden", "");
+      await loadSharedData();
+    }
+    updateClock();
+    renderAgents();
+    renderProjectsList();
+    renderNoticePanel();
+  }
+  init();
 
   /* ---------- Timers ---------- */
   setInterval(updateClock, 1000);
